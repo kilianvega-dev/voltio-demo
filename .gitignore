@@ -1,0 +1,5 @@
+# Notas de diseño locales: no se publican en GitHub Pages
+.impeccable/
+PRODUCT.md
+DESIGN.md
+node_modules/
