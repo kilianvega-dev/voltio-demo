@@ -288,7 +288,10 @@ html { scrollbar-color: var(--line) var(--bg-deep); }
     /* Celular y tablet: la rejilla no cabe en una pantalla, así que cada tarjeta llega al entrar. */
     .es-fluido .b-tarjeta { animation: llegar-corto linear both; animation-timeline: view(); animation-range: entry 0% entry 100%; }
     /* Escritorio: el escenario queda fijo y las tarjetas llegan una por una desde el fondo. */
-    @media (min-width: 1024px) and (min-height: 760px) {
+    /* El foco de teclado nunca cae en una tarjeta a medio llegar. Solo :focus-visible: con :focus-within el clic
+       del mouse en "Agregar" movía la tarjeta bajo el cursor y el clic se perdía. */
+    .es-fluido .b-tarjeta:has(:focus-visible) { animation: none; }
+    @media (min-width: 1024px) and (min-height: 620px) {
       .es-fluido .bento-sec { height: 240vh; padding-top: 0; overflow: clip; view-timeline: --bento block; }
       .es-fluido .bento-sec__esc {
         position: sticky; top: 0; height: 100svh; padding: 116px 0 24px; /* 116 px: deja libre la cabecera fija */
@@ -305,6 +308,16 @@ html { scrollbar-color: var(--line) var(--bg-deep); }
       .es-fluido .b-tarjeta[data-orden="5"] { animation-range: contain 30% contain 60%; }
       .es-fluido .b-tarjeta[data-orden="6"] { animation-range: contain 42% contain 72%; }
       .es-fluido .b-tarjeta[data-orden="7"] { animation-range: contain 54% contain 86%; }
+      /* Portátiles bajos (1366×768 deja unos 650 px): escenario más compacto para que quepa entero. */
+      @media (max-height: 819px) {
+        .es-fluido .bento-sec__esc { padding: 106px 0 14px; gap: 12px; }
+        .es-fluido .bento-sec__head .section__title { font-size: clamp(1.6rem, 1rem + 1.6vw, 2.2rem); }
+        .es-fluido .bento { gap: 10px; }
+        .es-fluido .b-tarjeta { padding: 14px; gap: 3px; }
+        .es-fluido .b-tit { font-size: 1.1rem; }
+        .es-fluido .b-2x2 .b-tit { font-size: clamp(1.5rem, 1rem + 1.6vw, 2.1rem); }
+        .es-fluido .b-tarjeta .btn { top: 10px; right: 10px; }
+      }
     }
   }
 }
@@ -797,8 +810,8 @@ input[type="search"]::-webkit-search-cancel-button { filter: invert(0.8); }
 }
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    .band__text { animation: band-run linear both; animation-timeline: view(); }
-    .section__title, .tile, .combo, .review, .close__title {
+    .es-fluido .band__text { animation: band-run linear both; animation-timeline: view(); }
+    .es-fluido :is(.section__title, .tile, .combo, .review, .close__title) {
       animation: reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 70%;
     }
   }

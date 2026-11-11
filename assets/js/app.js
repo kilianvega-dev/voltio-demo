@@ -665,10 +665,9 @@
     },
   };
 
-  document.addEventListener("DOMContentLoaded", () => {
-    const page = document.body.dataset.page;
-    layout(page);
-    pages[page]?.();
-    requestAnimationFrame(() => document.documentElement.classList.add("is-ready"));
-  });
+  // Se pinta al ejecutar (el script es `defer`, el DOM ya está): así la tienda no espera al módulo 3D ni a su CDN.
+  const page = document.body.dataset.page;
+  layout(page);
+  pages[page]?.();
+  requestAnimationFrame(() => document.documentElement.classList.add("is-ready"));
 })();

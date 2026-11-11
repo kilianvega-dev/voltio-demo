@@ -39,7 +39,7 @@ const browser = await puppeteer.launch({
 });
 
 // Cada apertura usa un contexto nuevo: carrito vacío. `lento` simula un equipo de 2 núcleos.
-async function abrir(w, h, { quieto = false, lento = false, ruta = "index.html" } = {}) {
+async function abrir(w, h, { quieto = false, lento = false, ruta = "index.html", cdn = "", sinEsperar = false } = {}) {
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage();
   await page.setViewport({ width: w, height: h });
@@ -51,7 +51,18 @@ async function abrir(w, h, { quieto = false, lento = false, ruta = "index.html" 
   const errores = [];
   page.on("console", (m) => m.type() === "error" && errores.push(m.text()));
   page.on("pageerror", (e) => errores.push(String(e)));
-  await page.goto(`${base}/${ruta}`, { waitUntil: "networkidle0" });
+  if (cdn) {
+    // cdn: "caido" corta jsDelivr (Three.js); "lento" lo demora 3 s.
+    await page.setRequestInterception(true);
+    page.on("request", (r) => {
+      if (!r.url().includes("cdn.jsdelivr.net")) return r.continue();
+      if (cdn === "caido") return r.abort();
+      setTimeout(() => r.continue().catch(() => {}), 3000);
+    });
+  }
+  const carga = page.goto(`${base}/${ruta}`, { waitUntil: "networkidle0" });
+  if (sinEsperar) carga.catch(() => {});
+  else await carga;
   return { page, errores, cerrar: () => ctx.close() };
 }
 
@@ -294,6 +305,111 @@ async function tareasLargas() {
   }
 }
 
+// ---------- Revisión final: casos fuera del camino feliz ----------
+// Píxeles claros dentro de un recorte de la pantalla (para saber si el canvas 3D está pintado).
+async function claros(page, clip) {
+  const b64 = await page.screenshot({ encoding: "base64", clip });
+  return page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = "data:image/png;base64," + b64;
+    await img.decode();
+    const c = new OffscreenCanvas(img.width, img.height).getContext("2d");
+    c.drawImage(img, 0, 0);
+    const d = c.getImageData(0, 0, img.width, img.height).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] > 300) n++;
+    return n;
+  }, b64);
+}
+const pausa = (ms) => new Promise((ok) => setTimeout(ok, ms));
+
+async function revision() {
+  // Portada fija (equipo lento): el producto 3D sigue dibujado después de cambiar el tamaño de la ventana.
+  {
+    const { page, cerrar } = await abrir(390, 844, { lento: true });
+    const caja = () => page.$eval(".scrub__canvas", (c) => { const r = c.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; });
+    const antes = await claros(page, await caja());
+    await page.setViewport({ width: 390, height: 760 });
+    await pausa(400);
+    const despues = await claros(page, await caja());
+    ver(antes > 2000 && despues > 2000, `portada fija: el 3D sigue dibujado tras redimensionar (píxeles claros ${antes} → ${despues})`);
+    await cerrar();
+  }
+  // Recargar a mitad del bento deja al usuario en el bento.
+  {
+    const { page, cerrar } = await abrir(1440, 900);
+    const m = await page.evaluate(() => { const b = document.getElementById("bento"); const y = b.getBoundingClientRect().top + scrollY; return { inicio: y, fin: y + b.offsetHeight - innerHeight }; });
+    await irA(page, (m.inicio + m.fin) / 2);
+    await pausa(300);
+    await page.reload({ waitUntil: "networkidle0" });
+    await pausa(300);
+    const d = await page.evaluate(() => { const r = document.getElementById("bento").getBoundingClientRect(); return { dentro: r.top <= 1 && r.bottom >= innerHeight - 1, y: Math.round(scrollY) }; });
+    ver(d.dentro, `recarga a mitad del bento: sigue dentro del bento (scroll ${d.y}, bento ${Math.round(m.inicio)}–${Math.round(m.fin)})`);
+    await cerrar();
+  }
+  // El foco de teclado nunca cae en una tarjeta invisible.
+  {
+    const { page, cerrar } = await abrir(1440, 900);
+    await irA(page, await page.evaluate(() => document.getElementById("bento").getBoundingClientRect().top + scrollY));
+    const o = await page.evaluate(async () => {
+      const t = document.querySelector('.b-tarjeta[data-orden="7"]');
+      t.querySelector("a").focus({ preventScroll: true });
+      await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+      return +getComputedStyle(t).opacity;
+    });
+    ver(o === 1, `foco de teclado en la tarjeta 7 al inicio del recorrido: se ve (opacidad ${o})`);
+    await cerrar();
+  }
+  // Portátil corriente (1366×768 deja ~650 px de alto): escenario fijo y nada recortado.
+  {
+    const { page, cerrar } = await abrir(1366, 650);
+    const m = await page.evaluate(() => { const b = document.getElementById("bento"); const y = b.getBoundingClientRect().top + scrollY; return { inicio: y, fin: y + b.offsetHeight - innerHeight }; });
+    await irA(page, (m.inicio + m.fin) / 2);
+    const medio = await estadoBento(page);
+    await irA(page, m.fin);
+    const fin = await estadoBento(page);
+    const d = await page.evaluate(() => ({
+      recortadas: [...document.querySelectorAll(".b-tarjeta")].filter((t) => t.scrollHeight > t.clientHeight + 1).map((t) => t.dataset.orden).join(),
+      cabe: document.getElementById("bento-grid").getBoundingClientRect().bottom <= innerHeight,
+    }));
+    ver(Math.abs(medio.techo) <= 1 && armado(fin), `portátil 1366×650: escenario fijo (top ${medio.techo}) y bento armado al final`);
+    ver(d.recortadas === "" && d.cabe, `portátil 1366×650: ninguna tarjeta recorta su contenido (${d.recortadas || "ninguna"}) y la rejilla cabe en pantalla (${d.cabe})`);
+    await foto(page, "bento-portatil-1366x650");
+    await cerrar();
+  }
+  // Equipo lento: versión quieta de verdad, sin ninguna animación de entrada.
+  {
+    const { page, cerrar } = await abrir(1440, 900, { lento: true });
+    const n = await page.evaluate(() => document.getAnimations().map((a) => a.animationName || "transición").join(", "));
+    ver(n === "", `equipo lento: ninguna animación activa en el inicio (${n || "ninguna"})`);
+    await cerrar();
+  }
+  // Three.js por CDN lento: la tienda (cabecera y bento) no espera al 3D.
+  {
+    const { page, cerrar } = await abrir(1440, 900, { cdn: "lento", sinEsperar: true });
+    await pausa(1500);
+    const d = await page.evaluate(() => ({ cabecera: !!document.querySelector("#site-header .wordmark"), tarjetas: document.querySelectorAll("#bento-grid .b-tarjeta").length })).catch(() => ({}));
+    ver(d.cabecera && d.tarjetas === 7, `CDN lento: a 1,5 s ya hay cabecera y bento (cabecera ${d.cabecera}, tarjetas ${d.tarjetas})`);
+    await cerrar();
+  }
+  // Three.js caído: portada fija con precio y botón a la vista, bento armado.
+  {
+    const { page, cerrar } = await abrir(1440, 900, { cdn: "caido" });
+    const d = await page.evaluate(() => ({
+      fija: document.getElementById("scrub").classList.contains("is-static"),
+      boton: +getComputedStyle(document.querySelector('#scrub [data-add]').closest(".scrub__chapter")).opacity,
+      alto: Math.round(document.getElementById("scrub").offsetHeight / innerHeight * 10) / 10,
+    }));
+    ver(d.fija && d.boton === 1 && d.alto < 2, `CDN caído: portada fija con el botón de compra visible (fija ${d.fija}, opacidad ${d.boton}, alto ${d.alto} pantallas)`);
+    await cerrar();
+  }
+  // El ícono de la pestaña también es de la marca nueva.
+  {
+    const svg = await (await fetch(`${base}/assets/img/favicon.svg`)).text();
+    ver(/c6ff3a/i.test(svg) && !/2453e6/i.test(svg), "favicon: lima, sin el azul viejo");
+  }
+}
+
 // ---------- Tarea 5: resortes, demo y flujo de compra ----------
 async function resortes() {
   for (const ruta of PAGINAS) {
@@ -316,7 +432,6 @@ async function resortes() {
 
 async function flujo() {
   const { page, errores, cerrar } = await abrir(1440, 900, { ruta: "tienda.html" });
-  const pausa = (ms) => new Promise((ok) => setTimeout(ok, ms));
   await page.click('#shop-grid [data-add="teclado-sesenta"]');
   await page.click("#cart-button");
   await page.waitForSelector("#cart-drawer[open]");
@@ -356,6 +471,7 @@ try {
   await tareasLargas();
   await resortes();
   await flujo();
+  await revision();
 } finally {
   await browser.close();
   servidor?.close();

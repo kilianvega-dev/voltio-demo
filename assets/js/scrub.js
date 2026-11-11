@@ -3,12 +3,11 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { detectar } from "./lento.js";
 
 const section = document.getElementById("scrub");
 const canvas = section.querySelector(".scrub__canvas");
 const chapters = [...section.querySelectorAll(".scrub__chapter")];
-const lento = detectar(); // también pone la clase es-lento en <html> para el bento
+const lento = document.documentElement.classList.contains("es-lento"); // la pone lento.js en el <head>
 
 let renderer;
 try {
@@ -102,6 +101,7 @@ function init() {
     camera.position.set(0, 1.6, wide ? 11 : still ? 12 : 19);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
+    if (lento) dibujarFijo(); // setSize borra el canvas: en la portada fija nadie más lo vuelve a dibujar
   }
 
   // Escena en función del progreso p (0..1) y el tiempo t para un leve flotar.
@@ -155,14 +155,15 @@ function init() {
     return clamp01(-r.top / (r.height - innerHeight));
   }
 
+  function dibujarFijo() {
+    pose(0.62, 0);
+    renderer.render(scene, camera);
+  }
+
   resize();
   addEventListener("resize", resize);
 
-  if (lento) {
-    pose(0.62, 0);
-    renderer.render(scene, camera);
-    return;
-  }
+  if (lento) return;
 
   let p = target(), visible = true, raf = 0;
   const clock = new THREE.Clock();
