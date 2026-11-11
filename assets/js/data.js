@@ -6,6 +6,7 @@ window.VOLTIO = {
     whatsapp: "573125825273",
     freeShippingFrom: 200000,
     shippingCost: 12900,
+    garantia: "6 meses en todo",
     author: { name: "Kilian Vega", whatsapp: "573125825273" },
   },
 
@@ -20,19 +21,19 @@ window.VOLTIO = {
     {
       id: "audifonos-pulso", name: "Audífonos Pulso ANC", category: "audio",
       price: 289900, before: 349900, rating: 4.8, reviews: 126, badge: "Más vendido",
-      short: "Cancelación de ruido activa y 40 horas de batería.",
+      short: "Cancelación de ruido activa y 40 horas de batería.", gancho: "Silencio total. 40 horas.",
       specs: ["Cancelación de ruido activa", "40 h de batería, carga rápida USB-C", "Bluetooth 5.3 multipunto", "Plegables, con estuche"],
     },
     {
       id: "earbuds-orbita", name: "Earbuds Órbita", category: "audio",
       price: 139900, before: 179900, rating: 4.6, reviews: 211,
-      short: "Inalámbricos, resistentes al sudor, estuche de carga.",
+      short: "Inalámbricos, resistentes al sudor, estuche de carga.", gancho: "30 h de música",
       specs: ["Bluetooth 5.3", "6 h + 24 h con el estuche", "Resistentes al agua IPX5", "Controles táctiles"],
     },
     {
       id: "cargador-halo", name: "Cargador inalámbrico Halo", category: "carga",
       price: 89900, rating: 4.7, reviews: 88, badge: "Nuevo",
-      short: "Carga rápida de 15 W con anillo de luz.",
+      short: "Carga rápida de 15 W con anillo de luz.", gancho: "Halo 15 W",
       specs: ["15 W carga rápida Qi", "Anillo LED indicador", "Compatible con iPhone y Android", "Incluye cable USB-C"],
     },
     {
@@ -91,7 +92,8 @@ window.VOLTIO = {
     },
   ],
 
-  featured: ["audifonos-pulso", "earbuds-orbita", "cargador-halo"],
+  // Productos estrella del bento del inicio, en orden de llegada. `gancho` es su frase de venta (opcional).
+  bento: ["audifonos-pulso", "earbuds-orbita", "cargador-halo", "hub-nodo"],
 
   combos: [
     { id: "combo-setup", name: "Combo Setup", items: ["teclado-sesenta", "mouse-trazo", "headset-arena"], price: 499900, pitch: "Todo para jugar o trabajar en tu escritorio." },

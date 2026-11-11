@@ -350,27 +350,27 @@
 
   const pages = {
     home() {
-      const rail = $("#hero-rail");
-      rail.innerHTML = D.featured.map((id, n) => {
+      // Bento: 4 productos estrella (D.bento) y 3 tarjetas de confianza, en el orden en que llegan con el scroll.
+      const estrella = (id, tam, grande) => {
         const p = byId[id];
-        return `<article class="rail-item ${n === 0 ? "rail-item--lead" : ""}">
-          <a class="rail-item__media" href="producto.html?id=${p.id}">
-            <img src="assets/img/${p.id}.webp" alt="${esc(p.name)}" width="1000" height="1000" ${n === 0 ? 'fetchpriority="high"' : 'loading="lazy"'}>
-            ${p.badge ? `<span class="tag">${esc(p.badge)}</span>` : ""}
-            ${p.before ? `<span class="tag tag--off num" aria-hidden="true">−${Math.round((1 - p.price / p.before) * 100)} %</span>` : ""}
-          </a>
-          <div class="rail-item__body">
-            <div>
-              <h2 class="rail-item__name"><a href="producto.html?id=${p.id}">${esc(p.name)}</a></h2>
-              <p class="rail-item__short">${esc(p.short)}</p>
-            </div>
-            <div class="rail-item__buy">
-              ${priceBlock(p)}
-              <button class="btn btn--blue" type="button" data-add="${p.id}">${icon("plus")} Agregar</button>
-            </div>
-          </div>
-        </article>`;
-      }).join("");
+        return { tam, html: `<img src="assets/img/${p.id}${grande ? "" : "-sm"}.webp" alt="" width="${grande ? 1000 : 480}" height="${grande ? 1000 : 480}" loading="lazy">
+          <p class="b-etq">${esc(p.badge || D.categories.find((c) => c.id === p.category).name)}</p>
+          <h3 class="b-tit"><a class="b-link" href="producto.html?id=${p.id}">${esc(p.gancho || p.name)}</a></h3>
+          <p class="b-pie">${p.gancho ? `<span class="b-nombre">${esc(p.name)}</span>` : ""}<span class="b-precio num">${fmt(p.price)}</span></p>` };
+      };
+      const [pulso, orbita, halo, hub] = D.bento;
+      const confianza = (etq, cuerpo) => ({ tam: "b-1x1", html: `<p class="b-etq"><a class="b-link" href="#preguntas">${etq}</a></p>${cuerpo}` });
+      const tarjetas = [
+        estrella(pulso, "b-2x2", true),
+        estrella(orbita, "b-1x2", true),
+        estrella(halo, "b-1x1"),
+        confianza("Envío gratis desde", `<p class="b-num num">${fmt(S.freeShippingFrom)}</p>`),
+        { ...confianza("Paga como quieras", `<ul class="b-chips">${["Nequi", "PSE", "Tarjeta", "Contraentrega"].map((m) => `<li><span>${m}</span></li>`).join("")}</ul>`), tam: "b-2x1" },
+        estrella(hub, "b-1x1"),
+        confianza("Garantía", `<p class="b-tit">${esc(S.garantia)}</p>`),
+      ];
+      tarjetas[0].html += `<button class="btn btn--blue" type="button" data-add="${pulso}" data-then-open aria-label="Agregar ${esc(byId[pulso].name)} al carrito">Agregar</button>`;
+      $("#bento-grid").innerHTML = tarjetas.map((t, i) => `<article class="b-tarjeta ${t.tam}" data-orden="${i + 1}">${t.html}</article>`).join("");
 
       $("#cats").innerHTML = D.categories.map((c) => {
         const items = D.products.filter((p) => p.category === c.id);
@@ -382,7 +382,7 @@
         </a></li>`;
       }).join("");
 
-      $("#best").innerHTML = D.products.filter((p) => !D.featured.includes(p.id)).slice(0, 4).map(tile).join("");
+      $("#best").innerHTML = D.products.filter((p) => !D.bento.includes(p.id)).slice(0, 4).map(tile).join("");
 
       $("#combo-list").innerHTML = D.combos.map((c) => {
         const full = c.items.reduce((s, id) => s + byId[id].price, 0);
