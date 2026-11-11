@@ -1,6 +1,6 @@
 # Voltio · Store Demo
 
-**Live demo: https://cuajada69.github.io/voltio-demo/**
+**Live demo: https://kilianvega-dev.github.io/voltio-demo/**
 
 A landing page plus a complete online store for a fictional Colombian tech-accessories shop. It is built mobile-first, because most customers arrive from WhatsApp or Instagram on their phones. The site is in Spanish and prices are in COP.
 
