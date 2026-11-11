@@ -350,6 +350,22 @@
 
   const pages = {
     home() {
+      // Banda infinita: corre sola, acelera con la velocidad del scroll y sigue su sentido.
+      const band = $(".band__text");
+      if (band && !reduceMotion.matches) {
+        let x = 0, dir = 1, boost = 0, lastY = scrollY, on = false;
+        const step = () => {
+          const dy = scrollY - lastY; lastY = scrollY;
+          if (dy) dir = Math.sign(dy);
+          boost = boost * 0.9 + Math.min(Math.abs(dy), 80) * 0.1;
+          x -= (0.6 + boost * 0.5) * dir;
+          const half = band.scrollWidth / 2;
+          if (x <= -half) x += half; else if (x > 0) x -= half;
+          band.style.transform = `translate3d(${x}px,0,0)`;
+          if (on) requestAnimationFrame(step);
+        };
+        new IntersectionObserver(([e]) => { const was = on; on = e.isIntersecting; if (on && !was) { lastY = scrollY; requestAnimationFrame(step); } }).observe(band);
+      }
       const rail = $("#hero-rail");
       rail.innerHTML = D.featured.map((id, n) => {
         const p = byId[id];
