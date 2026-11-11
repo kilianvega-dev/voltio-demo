@@ -45,6 +45,8 @@ async function abrir(w, h, { quieto = false, lento = false, ruta = "index.html",
   await page.setViewport({ width: w, height: h });
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: quieto ? "reduce" : "no-preference" }]);
   await page.evaluateOnNewDocument((n) => {
+    window.__cls = 0; // saltos de diseño acumulados desde la carga
+    new PerformanceObserver((l) => l.getEntries().forEach((e) => e.hadRecentInput || (window.__cls += e.value))).observe({ type: "layout-shift", buffered: true });
     Object.defineProperty(navigator, "hardwareConcurrency", { get: () => n });
     Object.defineProperty(navigator, "deviceMemory", { get: () => 8 });
   }, lento ? 2 : 8);
@@ -401,6 +403,14 @@ async function revision() {
       alto: Math.round(document.getElementById("scrub").offsetHeight / innerHeight * 10) / 10,
     }));
     ver(d.fija && d.boton === 1 && d.alto < 2, `CDN caído: portada fija con el botón de compra visible (fija ${d.fija}, opacidad ${d.boton}, alto ${d.alto} pantallas)`);
+    await cerrar();
+  }
+  // La cabecera la pinta el JS: no debe empujar la página al aparecer.
+  for (const [w, h] of [[412, 823], [1440, 900]]) {
+    const { page, cerrar } = await abrir(w, h);
+    await pausa(500);
+    const cls = await page.evaluate(() => window.__cls);
+    ver(cls < 0.05, `inicio ${w}px: sin saltos de diseño al cargar (CLS ${cls.toFixed(3)})`);
     await cerrar();
   }
   // El ícono de la pestaña también es de la marca nueva.
