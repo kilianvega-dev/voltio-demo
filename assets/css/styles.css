@@ -92,11 +92,10 @@ html { scrollbar-color: var(--line) var(--bg-deep); }
   min-height: 44px; padding: 0 20px;
   border: 1px solid transparent; border-radius: 999px;
   font-weight: 650; font-size: 0.95rem; line-height: 1; text-decoration: none; white-space: nowrap;
-  transition-property: scale, background-color, border-color, color;
-  transition-duration: 150ms; transition-timing-function: ease-out;
+  transition: scale 350ms var(--resorte), translate 350ms var(--resorte), background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
 }
 .btn:has(> .icon:first-child) { padding-left: 18px; }
-.btn:not(:disabled):active { scale: 0.96; }
+.btn:not(:disabled):active { scale: 0.96; translate: none; }
 .btn:disabled { cursor: not-allowed; opacity: 0.6; }
 /* shortcut: nombre heredado (btn--blue ya es lima), renombrar si se rehace app.js */
 .btn--blue { background: var(--acc); color: var(--acc-ink); }
@@ -117,8 +116,9 @@ html { scrollbar-color: var(--line) var(--bg-deep); }
 .icon-btn {
   display: inline-grid; place-items: center; width: 44px; height: 44px;
   border: 0; border-radius: 999px; background: transparent; color: var(--ink);
-  transition: background-color 150ms ease-out;
+  transition: scale 350ms var(--resorte), background-color 150ms ease-out;
 }
+.icon-btn:active { scale: 0.92; }
 @media (hover: hover) { .icon-btn:hover { background: var(--bg-3); } }
 
 /* ---------- encabezado ---------- */
@@ -161,9 +161,9 @@ html { scrollbar-color: var(--line) var(--bg-deep); }
   min-height: 44px; padding: 0 14px 0 12px;
   border: 1px solid var(--line); border-radius: 999px; background: var(--bg-2);
   font-weight: 650; font-size: 0.9rem;
-  transition-property: scale, border-color, background-color; transition-duration: 150ms; transition-timing-function: ease-out;
+  transition: scale 350ms var(--resorte), translate 350ms var(--resorte), border-color 150ms ease-out, background-color 150ms ease-out;
 }
-.charge-btn:active { scale: 0.96; }
+.charge-btn:active { scale: 0.96; translate: none; }
 @media (hover: hover) { .charge-btn:hover { border-color: var(--ink-3); } }
 .charge-btn__text { display: grid; text-align: left; line-height: 1.1; }
 .charge-btn__pct { font-variant-numeric: tabular-nums; }
@@ -340,8 +340,9 @@ html { scrollbar-color: var(--line) var(--bg-deep); }
 .cat-row {
   display: grid; grid-template-columns: 1fr auto; grid-template-areas: "name count" "blurb blurb" "thumbs thumbs";
   gap: 6px 16px; align-items: center; padding: 22px 4px; border-bottom: 1px solid var(--line); text-decoration: none;
-  transition: background-color 150ms ease-out;
+  transition: background-color 150ms ease-out, transform 350ms var(--resorte);
 }
+.cat-row:active { transform: scale(0.99); }
 .cat-row__name { grid-area: name; font: 800 clamp(1.6rem, 1rem + 2.4vw, 2.6rem)/1 var(--display); font-stretch: 125%; letter-spacing: -0.03em; }
 .cat-row__blurb { grid-area: blurb; color: var(--ink-3); }
 .cat-row__thumbs { grid-area: thumbs; display: flex; margin-top: 8px; }
@@ -367,7 +368,8 @@ html { scrollbar-color: var(--line) var(--bg-deep); }
 
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 @media (min-width: 760px) { .grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; } }
-.tile { display: flex; flex-direction: column; border-radius: 20px; background: var(--bg-2); overflow: hidden; }
+/* El resorte de tile y combo va en `transform`: `translate` y `scale` los usa la revelación al entrar. */
+.tile { display: flex; flex-direction: column; border-radius: 20px; background: var(--bg-2); overflow: hidden; transition: transform 450ms var(--resorte); }
 .tile__media { position: relative; display: block; aspect-ratio: 1; overflow: hidden; }
 .tile__media img { width: 100%; height: 100%; object-fit: cover; outline: 1px solid oklch(1 0 0 / 0.1); outline-offset: -1px; border-radius: inherit; transition: scale 500ms var(--ease); }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) { .tile__media:hover img { scale: 1.04; } }
@@ -396,6 +398,7 @@ html { scrollbar-color: var(--line) var(--bg-deep); }
   display: flex; flex-direction: column; gap: 8px; padding: 22px;
   border-radius: var(--r-lg); background: var(--bg);
   box-shadow: inset 0 0 0 1px var(--line);
+  transition: transform 450ms var(--resorte);
 }
 .combo__stack { display: flex; margin-bottom: 14px; }
 .combo__stack img {
@@ -559,7 +562,7 @@ html { scrollbar-color: var(--line) var(--bg-deep); }
   .toast.is-on { translate: -50% 0; }
 }
 .toast .icon { stroke-width: 2.5; }
-.toast__link { border: 0; background: var(--bg); color: var(--ink); border-radius: 99px; padding: 8px 14px; font-weight: 650; transition: scale 150ms ease-out; }
+.toast__link { border: 0; background: var(--bg); color: var(--ink); border-radius: 99px; padding: 8px 14px; font-weight: 650; transition: scale 350ms var(--resorte); }
 .toast__link:active { scale: 0.96; }
 
 /* ---------- tienda ---------- */
@@ -580,9 +583,9 @@ html { scrollbar-color: var(--line) var(--bg-deep); }
 .chip {
   flex: none; min-height: 40px; padding: 0 16px; border-radius: 99px;
   border: 1px solid var(--line); background: transparent; color: var(--ink-2); font-weight: 600; font-size: 0.9rem;
-  transition-property: background-color, border-color, color, scale; transition-duration: 150ms; transition-timing-function: ease-out;
+  transition: scale 350ms var(--resorte), translate 350ms var(--resorte), background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
 }
-.chip:active { scale: 0.96; }
+.chip:active { scale: 0.96; translate: none; }
 .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 @media (hover: hover) { .chip[aria-pressed="false"]:hover { border-color: var(--ink-3); color: var(--ink); } }
 .sort { display: flex; align-items: center; gap: 10px; color: var(--ink-3); font-size: 0.9rem; }
@@ -802,3 +805,15 @@ input[type="search"]::-webkit-search-cancel-button { filter: invert(0.8); }
 }
 @keyframes band-run { from { translate: 5% 0; } to { translate: -45% 0; } }
 @keyframes reveal { from { opacity: 0; translate: 0 40px; scale: 0.97; } }
+
+/* ---------- resortes: lo interactivo sube un poco al pasar el mouse ---------- */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .btn:not(:disabled):hover, .charge-btn:hover, .chip:hover { translate: 0 -2px; }
+  .icon-btn:hover { scale: 1.08; }
+  .tile:hover, .combo:hover { transform: translateY(-4px); }
+  .cat-row:hover { transform: translateX(6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .icon-btn, .charge-btn, .chip, .toast__link, .tile, .combo, .cat-row, .b-tarjeta { transition-duration: 0.01ms; }
+  .b-tarjeta:hover { translate: none; scale: none; }
+}

@@ -294,12 +294,68 @@ async function tareasLargas() {
   }
 }
 
+// ---------- Tarea 5: resortes, demo y flujo de compra ----------
+async function resortes() {
+  for (const ruta of PAGINAS) {
+    const { page, cerrar } = await abrir(1440, 900, { ruta });
+    const d = await page.evaluate(() => {
+      const R = "cubic-bezier(0.34, 1.56, 0.64, 1)";
+      const els = [...document.querySelectorAll(".btn, .tile, .cat-row, .combo, .chip, .charge-btn, .icon-btn, .b-tarjeta")];
+      return {
+        n: els.length,
+        sin: [...new Set(els.filter((e) => !getComputedStyle(e).transitionTimingFunction.includes(R)).map((e) => e.className.split(" ")[0]))].join(", "),
+        pie: document.querySelector(".signature")?.textContent.includes("Diseñado y desarrollado por Kilian Vega"),
+        demo: document.querySelector(".demo-strip")?.textContent.includes("demostración"),
+      };
+    });
+    ver(d.n > 0 && d.sin === "", `${ruta}: los ${d.n} elementos interactivos usan la curva de resorte (sin ella: ${d.sin || "ninguno"})`);
+    ver(d.pie && d.demo, `${ruta}: sigue marcada como demo (pie con Kilian Vega: ${d.pie}, franja de demostración: ${d.demo})`);
+    await cerrar();
+  }
+}
+
+async function flujo() {
+  const { page, errores, cerrar } = await abrir(1440, 900, { ruta: "tienda.html" });
+  const pausa = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  await page.click('#shop-grid [data-add="teclado-sesenta"]');
+  await page.click("#cart-button");
+  await page.waitForSelector("#cart-drawer[open]");
+  await pausa(600); // el carrito entra deslizándose
+  const waCarrito = await page.$eval('#drawer-foot a[href*="wa.me"]', (a) => decodeURIComponent(a.href));
+  ver(waCarrito.includes("[Demo Voltio]") && waCarrito.includes("Teclado mecánico Sesenta"), `flujo: el pedido por WhatsApp del carrito lleva "[Demo Voltio]" y el producto`);
+  await Promise.all([page.waitForNavigation(), page.click('#drawer-foot a[href="checkout.html"]')]);
+  ver(page.url().includes("checkout.html"), `flujo: del carrito se llega al checkout (${page.url()})`);
+  const waPago = await page.$eval('#site-footer a[href*="wa.me"]', (a) => decodeURIComponent(a.href));
+  ver(waPago.includes("[Demo Voltio]"), `flujo: el WhatsApp del checkout lleva "[Demo Voltio]"`);
+  await page.type("#f-nombre", "Ana Pérez");
+  await page.type("#f-celular", "3001234567");
+  await page.evaluate(() => { const d = document.getElementById("f-departamento"); d.value = [...d.options].find((o) => o.value).value; d.dispatchEvent(new Event("change", { bubbles: true })); });
+  await page.type("#f-ciudad", "Villavicencio");
+  await page.type("#f-direccion", "Calle 38 # 30-15");
+  ver(await page.$eval("input[name=metodo]:checked", (r) => r.value === "contraentrega"), "flujo: contraentrega es el método elegido");
+  await Promise.all([page.waitForNavigation({ timeout: 10000 }), page.click("#pay-btn")]);
+  const d = await page.evaluate(() => ({
+    url: location.href,
+    titulo: document.querySelector(".confirm__title")?.textContent || "",
+    wa: decodeURIComponent(document.querySelector('.confirm__actions a[href*="wa.me"]')?.href || ""),
+    carrito: localStorage.getItem("voltio-cart"),
+  }));
+  ver(/confirmacion\.html\?pedido=VT-/.test(d.url) && d.titulo.includes("Ana"), `flujo: confirmación del pedido (${d.url.split("/").pop()}, "${d.titulo}")`);
+  ver(d.wa.includes("[Demo Voltio]") && d.wa.includes("Contraentrega"), `flujo: el WhatsApp de la confirmación lleva "[Demo Voltio]" y el pago`);
+  ver(d.carrito === "[]", `flujo: el carrito queda vacío tras el pedido (${d.carrito})`);
+  ver(errores.length === 0, `flujo: sin errores de consola ${errores.join(" | ")}`);
+  await foto(page, "confirmacion-pedido-1440");
+  await cerrar();
+}
+
 try {
   await marca();
   await equipoLento();
   await bento();
   await scrubBento();
   await tareasLargas();
+  await resortes();
+  await flujo();
 } finally {
   await browser.close();
   servidor?.close();
