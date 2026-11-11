@@ -173,11 +173,18 @@ async function bento() {
     }
     await cerrar();
   }
-  // Agregar desde el bento, con animaciones activas.
+  // Agregar desde el bento, con animaciones activas (a mitad de animación se prueba en scrubBento).
   for (const [w, h] of TAMANOS) {
     const { page, cerrar } = await abrir(w, h);
     const boton = await page.$('#bento-grid [data-add="audifonos-pulso"]');
-    if (boton) await boton.click();
+    if (boton) {
+      // Primero se lleva el scroll hasta el botón y se espera el cuadro: la posición del botón depende del scroll.
+      await page.evaluate(async () => {
+        document.querySelector('#bento-grid [data-add="audifonos-pulso"]').scrollIntoView({ block: "center", behavior: "instant" });
+        await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+      });
+      await boton.click();
+    }
     const d = await page.evaluate(() => ({
       cuenta: document.querySelector("[data-cart-count]").textContent,
       carrito: JSON.parse(localStorage.getItem("voltio-cart") || "[]").map((l) => l.id + "×" + l.qty).join(),
@@ -188,10 +195,111 @@ async function bento() {
   }
 }
 
+// ---------- Tarea 4: el bento se arma con el scroll ----------
+// Va a una posición de scroll y espera dos cuadros para que las animaciones ligadas al scroll se actualicen.
+const irA = (page, y) => page.evaluate(async (y) => {
+  scrollTo({ top: y, behavior: "instant" });
+  await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+}, y);
+// Opacidad y distancia (px) de cada tarjeta a su celda de la rejilla; animaciones activas sobre las tarjetas.
+const estadoBento = (page) => page.evaluate(() => {
+  const tarjetas = [...document.querySelectorAll("#bento-grid .b-tarjeta")];
+  const ahora = tarjetas.map((t) => ({ o: +getComputedStyle(t).opacity, r: t.getBoundingClientRect() }));
+  const animadas = document.getAnimations().filter((a) => a.effect?.target?.classList.contains("b-tarjeta") && a.playState !== "paused").length;
+  tarjetas.forEach((t) => (t.style.animation = "none"));
+  const d = ahora.map((e, i) => { const c = tarjetas[i].getBoundingClientRect(); return { o: e.o, lejos: Math.max(Math.abs(e.r.x - c.x), Math.abs(e.r.y - c.y), Math.abs(e.r.width - c.width), Math.abs(e.r.height - c.height)) }; });
+  tarjetas.forEach((t) => (t.style.animation = ""));
+  return { tarjetas: d, animadas, techo: document.querySelector(".bento-sec__esc").getBoundingClientRect().top };
+});
+const armado = (e) => e.tarjetas.length === 7 && e.tarjetas.every((t) => t.o === 1 && t.lejos <= 2);
+
+async function scrubBento() {
+  for (const [w, h] of TAMANOS) {
+    const en = `scrub ${w}px`;
+    const { page, errores, cerrar } = await abrir(w, h);
+    const m = await page.evaluate(() => { const b = document.getElementById("bento"); const y = b.getBoundingClientRect().top + scrollY; return { inicio: y, fin: y + b.offsetHeight - innerHeight }; });
+    await irA(page, m.inicio);
+    let e = await estadoBento(page);
+    ver(e.tarjetas[6].o < 0.5 || e.tarjetas[6].lejos > 2, `${en}: al inicio la tarjeta 7 aún no está en su lugar (opacidad ${e.tarjetas[6].o}, a ${Math.round(e.tarjetas[6].lejos)} px)`);
+    await foto(page, `scrub-${w}-0`);
+    await irA(page, (m.inicio + m.fin) / 2);
+    e = await estadoBento(page);
+    if (w >= 1024) ver(Math.abs(e.techo) <= 1, `${en}: el escenario queda fijo a mitad del recorrido (top ${e.techo})`);
+    await foto(page, `scrub-${w}-50`);
+    await irA(page, m.inicio + (m.fin - m.inicio) * 0.25);
+    await foto(page, `scrub-${w}-25`);
+    await irA(page, m.fin);
+    e = await estadoBento(page);
+    ver(armado(e), `${en}: al final las 7 están visibles y en su celda (${e.tarjetas.map((t) => `${t.o}/${Math.round(t.lejos)}`).join(" ")})`);
+    await foto(page, `scrub-${w}-100`);
+    // Volver hacia arriba desarma, y bajar de nuevo rearma igual.
+    await irA(page, m.inicio);
+    const arriba = await estadoBento(page);
+    await irA(page, m.fin);
+    ver(!armado(arriba) && armado(await estadoBento(page)), `${en}: al subir se desarma y al bajar se rearma completo`);
+
+    // Clic en "Agregar" con la tarjeta de Pulso a mitad de su animación.
+    const boton = await page.$('#bento-grid [data-add="audifonos-pulso"]');
+    let medio = null;
+    for (let y = m.inicio - h; y < m.fin && !medio; y += 40) {
+      await irA(page, y);
+      const t = (await estadoBento(page)).tarjetas[0];
+      await irA(page, y); // estadoBento reinicia las animaciones al medir: esperar a que vuelvan a su punto
+      const caja = await boton.boundingBox();
+      if (t.o > 0.2 && t.lejos > 2 && caja && caja.y > 130 && caja.y + caja.height < h) medio = { ...caja, o: t.o, lejos: t.lejos };
+    }
+    ver(!!medio, `${en}: se encontró un punto con Pulso a mitad de animación ${medio ? `(opacidad ${medio.o.toFixed(2)}, a ${Math.round(medio.lejos)} px)` : ""}`);
+    if (medio) {
+      await page.mouse.click(medio.x + medio.width / 2, medio.y + medio.height / 2);
+      const cuenta = await page.evaluate(() => document.querySelector("[data-cart-count]").textContent);
+      ver(cuenta === "1", `${en}: clic en "Agregar" a mitad de la animación agrega (${cuenta})`);
+    }
+    ver(errores.length === 0, `${en}: sin errores de consola ${errores.join(" | ")}`);
+    await cerrar();
+
+    // Versión quieta: armado desde el principio y sin animaciones.
+    for (const [nombre, opciones] of [["movimiento reducido", { quieto: true }], ["2 núcleos", { lento: true }]]) {
+      const q = await abrir(w, h, opciones);
+      const y = await q.page.evaluate(() => document.getElementById("bento").getBoundingClientRect().top + scrollY);
+      await irA(q.page, y - h / 2);
+      const e1 = await estadoBento(q.page);
+      await irA(q.page, y);
+      const e2 = await estadoBento(q.page);
+      ver(armado(e1) && armado(e2) && e2.animadas === 0, `${en} ${nombre}: bento armado desde el principio y sin animaciones (${e2.animadas} activas)`);
+      await q.cerrar();
+    }
+  }
+}
+
+// Recorrer todo el inicio con CPU 4× más lenta: ninguna tarea larga > 200 ms.
+async function tareasLargas() {
+  for (const [w, h] of TAMANOS) {
+    const { page, cerrar } = await abrir(w, h);
+    await page.emulateCPUThrottling(4);
+    const peor = await page.evaluate(async () => {
+      let peor = 0;
+      new PerformanceObserver((l) => l.getEntries().forEach((e) => (peor = Math.max(peor, e.duration)))).observe({ type: "longtask" });
+      const fin = document.documentElement.scrollHeight - innerHeight;
+      for (let y = 0; y < fin; y += 120) { scrollTo({ top: y, behavior: "instant" }); await new Promise((ok) => setTimeout(ok, 30)); }
+      await new Promise((ok) => setTimeout(ok, 300));
+      // Autocomprobación: un bloqueo a propósito tiene que aparecer, o el medidor no mide nada.
+      const medido = peor;
+      peor = 0;
+      for (const t = performance.now(); performance.now() - t < 120;);
+      await new Promise((ok) => setTimeout(ok, 300));
+      return { peor: Math.round(medido), mide: peor >= 100 };
+    }).then((r) => (ver(r.mide, `tareas largas ${w}px: el medidor detecta un bloqueo de prueba`), r.peor));
+    ver(peor <= 200, `tareas largas ${w}px con CPU 4×: la peor dura ${peor} ms (máx. 200)`);
+    await cerrar();
+  }
+}
+
 try {
   await marca();
   await equipoLento();
   await bento();
+  await scrubBento();
+  await tareasLargas();
 } finally {
   await browser.close();
   servidor?.close();

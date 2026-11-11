@@ -12,6 +12,7 @@ export function detectar() {
     nucleos: navigator.hardwareConcurrency,
     memoria: navigator.deviceMemory,
   });
-  document.documentElement.classList.toggle("es-lento", lento);
+  // es-fluido enciende las animaciones ligadas al scroll: si este módulo no carga, el sitio queda quieto y armado.
+  document.documentElement.classList.add(lento ? "es-lento" : "es-fluido");
   return lento;
 }
