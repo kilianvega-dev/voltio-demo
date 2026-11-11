@@ -67,8 +67,23 @@ async function marca() {
   }
 }
 
+// ---------- Tarea 2: equipo lento ----------
+async function equipoLento() {
+  for (const [nombre, opciones, esperado] of [["normal", {}, false], ["2 núcleos", { lento: true }, true], ["movimiento reducido", { quieto: true }, true]]) {
+    const { page, errores, cerrar } = await abrir(1440, 900, opciones);
+    const d = await page.evaluate(() => ({
+      html: document.documentElement.classList.contains("es-lento"),
+      portada: document.getElementById("scrub").classList.contains("is-static"),
+    }));
+    ver(d.html === esperado && d.portada === esperado, `inicio ${nombre}: es-lento=${d.html}, portada fija=${d.portada} (esperado ${esperado})`);
+    ver(errores.length === 0, `inicio ${nombre}: sin errores de consola ${errores.join(" | ")}`);
+    await cerrar();
+  }
+}
+
 try {
   await marca();
+  await equipoLento();
 } finally {
   await browser.close();
 }

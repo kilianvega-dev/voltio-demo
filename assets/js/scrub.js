@@ -3,11 +3,12 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { detectar } from "./lento.js";
 
 const section = document.getElementById("scrub");
 const canvas = section.querySelector(".scrub__canvas");
 const chapters = [...section.querySelectorAll(".scrub__chapter")];
-const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const lento = detectar(); // también pone la clase es-lento en <html> para el bento
 
 let renderer;
 try {
@@ -15,8 +16,8 @@ try {
 } catch {
   renderer = null;
 }
-if (!renderer || reduce) {
-  // Sin WebGL o con movimiento reducido: portada fija, se ven el título y el precio.
+if (!renderer || lento) {
+  // Equipo lento (sin WebGL, movimiento reducido, pocos núcleos o poca memoria): portada fija, se ven el título y el precio.
   section.classList.add("is-static");
   if (!renderer) section.classList.add("no-gl");
 }
@@ -108,7 +109,7 @@ function init() {
     const open = ease(seg(p, 0.14, 0.4));
     const rise = ease(seg(p, 0.4, 0.68));
     const settle = ease(seg(p, 0.72, 0.95));
-    const float = reduce ? 0 : Math.sin(t * 1.4) * 0.05;
+    const float = Math.sin(t * 1.4) * 0.05;
 
     // En pantalla ancha el producto vive a la derecha del texto; en celular, arriba.
     product.position.x = wide ? lerp(1.9, 2.1, settle) : 0;
@@ -157,7 +158,7 @@ function init() {
   resize();
   addEventListener("resize", resize);
 
-  if (reduce) {
+  if (lento) {
     pose(0.62, 0);
     renderer.render(scene, camera);
     return;
