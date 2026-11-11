@@ -34,16 +34,16 @@ function init() {
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
   const key = new THREE.DirectionalLight(0xffffff, 1.6);
   key.position.set(3, 5, 4);
-  const rim = new THREE.PointLight(0x5fd8ff, 0, 12); // cian de carga: crece al abrir
+  const rim = new THREE.PointLight(0xc6ff3a, 0, 12); // lima de carga: crece al abrir
   rim.position.set(0, 0.6, 0.4);
   scene.add(key, rim);
 
-  // Materiales: estuche azul marino lacado, audífonos claros, puntas de silicona grises, LED cian.
-  const navy = new THREE.MeshPhysicalMaterial({ color: 0x1a2a6b, metalness: 0.35, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.15 });
-  const cavity = new THREE.MeshStandardMaterial({ color: 0x060a1c, roughness: 0.9 });
+  // Materiales: estuche grafito lacado, audífonos claros, puntas de silicona grises, LED lima.
+  const grafito = new THREE.MeshPhysicalMaterial({ color: 0x1b1e22, metalness: 0.35, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.15 });
+  const cavity = new THREE.MeshStandardMaterial({ color: 0x050607, roughness: 0.9 });
   const shell = new THREE.MeshPhysicalMaterial({ color: 0xeef1fa, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08 });
-  const silicone = new THREE.MeshStandardMaterial({ color: 0x8a90a8, roughness: 0.75 });
-  const led = new THREE.MeshStandardMaterial({ color: 0x0a1a24, emissive: 0x5fe0ff, emissiveIntensity: 0.2 });
+  const silicone = new THREE.MeshStandardMaterial({ color: 0x8c918a, roughness: 0.75 });
+  const led = new THREE.MeshStandardMaterial({ color: 0x10140a, emissive: 0xc6ff3a, emissiveIntensity: 0.2 });
 
   const W = 3.2, D = 2.1;
   const product = new THREE.Group();
@@ -51,7 +51,7 @@ function init() {
 
   const caseGroup = new THREE.Group();
   product.add(caseGroup);
-  const base = new THREE.Mesh(new RoundedBoxGeometry(W, 1.5, D, 6, 0.36), navy);
+  const base = new THREE.Mesh(new RoundedBoxGeometry(W, 1.5, D, 6, 0.36), grafito);
   base.position.y = -0.75;
   const hole = new THREE.Mesh(new RoundedBoxGeometry(W - 0.9, 0.02, D - 0.9, 4, 0.01), cavity);
   hole.position.y = 0.002;
@@ -62,7 +62,7 @@ function init() {
   // Tapa con bisagra en el borde trasero.
   const hinge = new THREE.Group();
   hinge.position.set(0, 0, -D / 2 + 0.05);
-  const lid = new THREE.Mesh(new RoundedBoxGeometry(W, 0.8, D, 6, 0.36), navy);
+  const lid = new THREE.Mesh(new RoundedBoxGeometry(W, 0.8, D, 6, 0.36), grafito);
   lid.position.set(0, 0.4, D / 2 - 0.05);
   hinge.add(lid);
   caseGroup.add(hinge);
