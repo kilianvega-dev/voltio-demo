@@ -25,7 +25,7 @@ export async function firmaIntegridad(referencia, centavos, moneda, secreto) {
 
 function responder(datos, estado, origen) {
   const permitido = ORIGENES.some((o) => origen === o || origen?.startsWith(o + ":"));
-  return new Response(JSON.stringify(datos), {
+  return new Response(estado === 204 ? null : JSON.stringify(datos), {
     status: estado,
     headers: {
       "content-type": "application/json",
