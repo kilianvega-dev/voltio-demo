@@ -178,7 +178,7 @@
           </button>
         </div>
       </div>
-      <div class="demo-strip">Tienda de demostración · los pagos no son reales</div>`;
+      <div class="demo-strip">Tienda de demostración · pagos en modo prueba de Wompi, sin dinero real</div>`;
 
     $("#site-footer").innerHTML = `
       <div class="footer__inner">
@@ -688,7 +688,7 @@
         const bateria = $(".confirm__hero .battery");
         bateria?.classList.remove("battery--full");
         bateria?.style.setProperty("--charge", "0"); // si no, toma la carga del carrito, que sigue lleno
-        $("#confirm-pasos").outerHTML = `<p class="demo-banner">${motivo} Tus productos siguen en el carrito para que lo intentes de nuevo, con otro medio de pago o con contraentrega.</p>`;
+        $("#confirm-pasos").outerHTML = `<p class="demo-banner">${motivo} Tus productos siguen en el carrito para que lo intentes de nuevo, con otro medio de pago o con contraentrega.<br><span class="muted">En esta demo, paga con la tarjeta de prueba <code>4242 4242 4242 4242</code>, cualquier fecha futura y CVV 123.</span></p>`;
         const acciones = $("#confirm-acciones");
         acciones.innerHTML = `<a class="btn btn--blue btn--lg" href="checkout.html">Intentar de nuevo ${icon("arrow")}</a>
           <a class="btn btn--ghost btn--lg" href="${waLink(`[Demo Voltio] Hola, tuve un problema pagando el pedido ${o.id}.`)}" target="_blank" rel="noopener">${icon("whatsapp")} Pedir ayuda</a>`;

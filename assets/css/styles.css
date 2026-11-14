@@ -714,6 +714,12 @@ input[type="search"]::-webkit-search-cancel-button { filter: invert(0.8); }
 @media (hover: hover) { .method:hover .method__body { border-color: var(--ink-3); } }
 .method-panel { margin-top: 16px; display: grid; gap: 12px; color: var(--ink-2); }
 .method-panel[hidden] { display: none; }
+.prueba { margin-top: 14px; padding: 14px 16px; border-radius: var(--r-md); box-shadow: inset 0 0 0 1px var(--acc); }
+.prueba__titulo { color: var(--ink); font-weight: 600; margin-bottom: 8px; }
+.prueba__datos { display: grid; gap: 6px; margin-bottom: 8px; }
+.prueba__datos div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.prueba__datos dt { color: var(--ink-2); }
+.prueba code, .demo-banner code { font-variant-numeric: tabular-nums; color: var(--ink); user-select: all; }
 
 .form-status { color: var(--danger); font-weight: 600; }
 .form-status:empty { display: none; }

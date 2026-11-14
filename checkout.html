@@ -24,7 +24,7 @@
       <div class="page__head">
         <h1 class="page__title">Finalizar compra</h1>
       </div>
-      <p class="demo-banner"><strong>Tienda de demostración.</strong> Los pagos en línea van por Wompi en modo prueba: no se cobra dinero. Puedes llenar el formulario con datos inventados.</p>
+      <p class="demo-banner"><strong>Tienda de demostración.</strong> Puedes probar un pago real en modo prueba de Wompi: llena el formulario con datos inventados, elige <strong>Pago en línea</strong> y usa los datos de prueba que aparecen ahí. No se cobra dinero.</p>
 
       <div class="checkout">
         <form class="checkout__form" id="checkout-form" novalidate>
@@ -84,7 +84,15 @@
             </div>
             <div class="method-panel" data-method-panel="wompi" hidden>
               <p>Se abre la ventana segura de Wompi para pagar con Nequi, PSE o tarjeta.</p>
-              <p class="muted">Modo prueba: tarjeta 4242 4242 4242 4242 con cualquier fecha futura y CVV, o Nequi 3991111111. No se cobra dinero.</p>
+              <div class="prueba">
+                <p class="prueba__titulo">Datos de prueba de Wompi · no se cobra dinero</p>
+                <dl class="prueba__datos">
+                  <div><dt>Tarjeta aprobada</dt><dd><code>4242 4242 4242 4242</code></dd></div>
+                  <div><dt>Tarjeta rechazada</dt><dd><code>4111 1111 1111 1111</code></dd></div>
+                  <div><dt>Nequi aprobado</dt><dd><code>3991111111</code></dd></div>
+                </dl>
+                <p class="muted">Con tarjeta, usa cualquier fecha futura y CVV 123. Otros números dan "error en el pago".</p>
+              </div>
             </div>
           </fieldset>
 
