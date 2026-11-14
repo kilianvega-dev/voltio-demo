@@ -604,7 +604,7 @@
           form.dataset.sent = "1";
           Object.assign(order, pago);
           store("voltio-order", order);
-          clearCart();
+          if (!pago) clearCart(); // con Wompi el carrito se vacía solo cuando el pago queda aprobado
           location.href = `confirmacion.html?pedido=${order.id}`;
         };
         if (data.metodo !== "wompi") return setTimeout(terminar, 1400);
@@ -646,7 +646,7 @@
           <h1 class="confirm__title" id="confirm-title">¡Listo, ${esc(firstName)}! Tu pedido está cargado.</h1>
           <p class="confirm__id">Pedido <strong class="num">${esc(o.id)}</strong> · <span id="pago-estado">${o.metodo === "contraentrega" ? "pagas al recibir" : "verificando el pago…"}</span></p>
         </div>
-        <ol class="steps">
+        <ol class="steps" id="confirm-pasos"${o.tx ? " hidden" : ""}>
           <li class="is-done"><span>${icon("check")}</span><div><strong>Pedido recibido</strong><p>Te escribimos por WhatsApp al ${esc(o.customer.celular)}.</p></div></li>
           <li><span>${icon("box")}</span><div><strong>Preparando</strong><p>Empacamos y revisamos tus productos.</p></div></li>
           <li><span>${icon("truck")}</span><div><strong>En camino</strong><p>Llega a ${esc(o.customer.ciudad)} en 24–48 h hábiles.</p></div></li>
@@ -667,23 +667,44 @@
             <p>${METHOD[o.metodo] || esc(o.metodo)}</p>
           </section>
         </div>
-        <div class="confirm__actions">
+        <div class="confirm__actions" id="confirm-acciones"${o.tx ? " hidden" : ""}>
           <a class="btn btn--blue btn--lg" href="${waLink(msg)}" target="_blank" rel="noopener">${icon("whatsapp")} Enviar pedido por WhatsApp</a>
           <a class="btn btn--ghost btn--lg" href="tienda.html">Seguir comprando</a>
         </div>
         <p class="demo-note">${o.tx ? "Esto es una demostración: el pago fue en modo prueba de Wompi y no se cobró dinero." : "Esto es una demostración: no se cobró dinero ni se envió ningún dato. El pedido solo existe en tu navegador."}</p>`;
 
-      // El estado lo da Wompi (vía el Worker), no el navegador.
+      // El estado lo da Wompi (vía el Worker), no el navegador. Pasos y acciones esperan a saberlo.
       if (!o.tx) return;
       const ESTADO = { APPROVED: "pago aprobado", PENDING: "pago pendiente", DECLINED: "pago rechazado", VOIDED: "pago anulado", ERROR: "error en el pago" };
+      const exito = () => {
+        clearCart();
+        $("#confirm-pasos").hidden = false;
+        $("#confirm-acciones").hidden = false;
+      };
+      const fallo = (estado, motivo) => {
+        $("#pago-estado").textContent = estado;
+        $("#confirm-title").textContent = "Tu pago no se completó";
+        document.title = "Pago no completado · Voltio";
+        const bateria = $(".confirm__hero .battery");
+        bateria?.classList.remove("battery--full");
+        bateria?.style.setProperty("--charge", "0"); // si no, toma la carga del carrito, que sigue lleno
+        $("#confirm-pasos").outerHTML = `<p class="demo-banner">${motivo} Tus productos siguen en el carrito para que lo intentes de nuevo, con otro medio de pago o con contraentrega.</p>`;
+        const acciones = $("#confirm-acciones");
+        acciones.innerHTML = `<a class="btn btn--blue btn--lg" href="checkout.html">Intentar de nuevo ${icon("arrow")}</a>
+          <a class="btn btn--ghost btn--lg" href="${waLink(`[Demo Voltio] Hola, tuve un problema pagando el pedido ${o.id}.`)}" target="_blank" rel="noopener">${icon("whatsapp")} Pedir ayuda</a>`;
+        acciones.hidden = false;
+      };
       fetch(`${S.pagos}/estado?id=${encodeURIComponent(o.tx)}`)
         .then((r) => (r.ok ? r.json() : Promise.reject()))
         .then((p) => {
-          const valido = p.referencia === o.id;
-          $("#pago-estado").textContent = valido ? ESTADO[p.estado] || p.estado : "no pudimos verificar el pago";
-          if (!valido || !["APPROVED", "PENDING"].includes(p.estado)) $("#confirm-title").textContent = "Tu pago no se completó";
+          if (p.referencia !== o.id) return fallo("no pudimos verificar el pago", "No pudimos confirmar este pago con Wompi.");
+          if (["APPROVED", "PENDING"].includes(p.estado)) {
+            $("#pago-estado").textContent = ESTADO[p.estado];
+            return exito();
+          }
+          fallo(ESTADO[p.estado] || p.estado, "Wompi no aprobó el pago y no se cobró nada.");
         })
-        .catch(() => ($("#pago-estado").textContent = "no pudimos verificar el pago"));
+        .catch(() => fallo("no pudimos verificar el pago", "No pudimos confirmar el pago con Wompi."));
     },
   };
 
