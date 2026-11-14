@@ -41,6 +41,7 @@ export default {
     if (req.method === "OPTIONS") return responder({}, 204, origen);
 
     if (req.method === "POST" && url.pathname === "/firma") {
+      if (!env.WOMPI_INTEGRITY_SECRET) return responder({ error: "Pagos sin configurar" }, 503, origen);
       let centavos;
       try {
         centavos = totalPesos((await req.json()).lineas) * 100;
