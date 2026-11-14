@@ -6,6 +6,7 @@ window.VOLTIO = {
     whatsapp: "573125825273",
     freeShippingFrom: 200000,
     shippingCost: 12900,
+    pagos: "https://voltio-pagos.kilianvega22.workers.dev",
     garantia: "6 meses en todo",
     author: { name: "Kilian Vega", whatsapp: "573125825273" },
   },

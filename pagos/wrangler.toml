@@ -1,0 +1,8 @@
+name = "voltio-pagos"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+# Modo prueba. La llave pública puede ir aquí; el secreto de integridad va con `wrangler secret put`.
+WOMPI_API = "https://sandbox.wompi.co/v1"
+WOMPI_PUBLIC_KEY = "pub_test_REEMPLAZAR"

@@ -545,12 +545,10 @@
       methods.forEach((r) => r.addEventListener("change", syncMethod));
       syncMethod();
 
-      // Formato de tarjeta y teléfono mientras se escribe.
+      // Formato del teléfono mientras se escribe.
       form.addEventListener("input", (e) => {
         const el = e.target;
-        if (el.name === "tarjeta") el.value = el.value.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
-        if (el.name === "vence") el.value = el.value.replace(/\D/g, "").slice(0, 4).replace(/^(\d{2})(\d)/, "$1/$2");
-        if (["celular", "nequi", "cvv"].includes(el.name)) el.value = el.value.replace(/\D/g, "");
+        if (el.name === "celular") el.value = el.value.replace(/\D/g, "");
         if (el.closest(".field")?.classList.contains("has-error")) validate(el);
         if (!$(".has-error", form)) $("#form-status").textContent = "";
       });
@@ -562,22 +560,14 @@
         ciudad: "Escribe la ciudad de entrega.",
         direccion: "Escribe la dirección con número, por ejemplo Calle 38 # 30-15.",
         departamento: "Elige el departamento.",
-        nequi: "Escribe el número de Nequi de 10 dígitos.",
-        banco: "Elige tu banco.",
-        tarjeta: "Escribe los 16 dígitos de la tarjeta.",
-        vence: "Escribe la fecha como MM/AA.",
-        cvv: "Escribe los 3 dígitos del reverso.",
       };
       function validate(el) {
         if (el.disabled || !el.name || !(el.name in MSG)) return true;
         const v = el.value.trim();
         let ok = v.length > 0;
         if (el.name === "nombre") ok = v.split(/\s+/).length >= 2;
-        if (el.name === "celular" || el.name === "nequi") ok = /^3\d{9}$/.test(v);
+        if (el.name === "celular") ok = /^3\d{9}$/.test(v);
         if (el.name === "direccion") ok = /\d/.test(v) && v.length >= 6;
-        if (el.name === "tarjeta") ok = v.replace(/\s/g, "").length === 16;
-        if (el.name === "vence") ok = /^(0[1-9]|1[0-2])\/\d{2}$/.test(v);
-        if (el.name === "cvv") ok = /^\d{3}$/.test(v);
         const field = el.closest(".field");
         const err = field && $(".field__error", field);
         field?.classList.toggle("has-error", !ok);
@@ -586,7 +576,7 @@
         return ok;
       }
 
-      form.addEventListener("submit", (e) => {
+      form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const fields = $$("input, select", form).filter((i) => !i.disabled && i.name in MSG);
         const bad = fields.filter((f) => !validate(f));
@@ -599,8 +589,8 @@
         const btn = $("#pay-btn");
         btn.disabled = true;
         btn.classList.add("is-loading");
-        $("#pay-label").textContent = "Procesando pago de prueba…";
         const data = Object.fromEntries(new FormData(form));
+        $("#pay-label").textContent = data.metodo === "wompi" ? "Abriendo Wompi…" : "Confirmando pedido…";
         const t = totals();
         const order = {
           id: "VT-" + Date.now().toString(36).slice(-6).toUpperCase(),
@@ -610,12 +600,32 @@
           customer: { nombre: data.nombre, celular: data.celular, ciudad: data.ciudad, departamento: data.departamento, direccion: data.direccion, barrio: data.barrio || "" },
           metodo: data.metodo,
         };
-        setTimeout(() => {
+        const terminar = (pago) => {
           form.dataset.sent = "1";
+          Object.assign(order, pago);
           store("voltio-order", order);
           clearCart();
           location.href = `confirmacion.html?pedido=${order.id}`;
-        }, 1400);
+        };
+        if (data.metodo !== "wompi") return setTimeout(terminar, 1400);
+
+        // Pago real en modo prueba: el Worker calcula el total y firma; Wompi cobra en su ventana.
+        try {
+          const r = await fetch(`${S.pagos}/firma`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ lineas: cart.map(({ id, qty }) => ({ id, qty })) }),
+          });
+          if (!r.ok || !window.WidgetCheckout) throw new Error();
+          const f = await r.json();
+          new WidgetCheckout({ currency: f.moneda, amountInCents: f.centavos, reference: f.referencia, publicKey: f.llavePublica, signature: { integrity: f.firma } })
+            .open((res) => terminar({ id: f.referencia, tx: res.transaction.id }));
+        } catch {
+          $("#form-status").textContent = "No pudimos abrir el pago en línea. Intenta de nuevo o elige contraentrega.";
+        }
+        btn.disabled = false;
+        btn.classList.remove("is-loading");
+        $("#pay-label").textContent = "Pagar ahora";
       });
     },
 
@@ -627,14 +637,14 @@
         main.innerHTML = `<div class="empty empty--wide"><p class="empty__title">No encontramos ese pedido</p><p>Los pedidos de esta demo solo se guardan en este navegador.</p><a class="btn btn--blue" href="tienda.html">Ir a la tienda ${icon("arrow")}</a></div>`;
         return;
       }
-      const METHOD = { nequi: "Nequi", pse: "PSE", tarjeta: "Tarjeta", contraentrega: "Contraentrega (pagas al recibir)" };
+      const METHOD = { wompi: "Pago en línea (Wompi)", contraentrega: "Contraentrega (pagas al recibir)" };
       const msg = `[Demo Voltio] Hola, hice el pedido ${o.id} por ${fmt(o.totals.total)}. Pago: ${METHOD[o.metodo]}. Envío a ${o.customer.direccion}, ${o.customer.ciudad}.`;
       const firstName = o.customer.nombre.split(/\s+/)[0];
       main.innerHTML = `
         <div class="confirm__hero">
           ${batteryMarkup("battery--xl battery--full")}
-          <h1 class="confirm__title">¡Listo, ${esc(firstName)}! Tu pedido está cargado.</h1>
-          <p class="confirm__id">Pedido <strong class="num">${esc(o.id)}</strong> · ${o.metodo === "contraentrega" ? "pagas al recibir" : "pago de prueba aprobado"}</p>
+          <h1 class="confirm__title" id="confirm-title">¡Listo, ${esc(firstName)}! Tu pedido está cargado.</h1>
+          <p class="confirm__id">Pedido <strong class="num">${esc(o.id)}</strong> · <span id="pago-estado">${o.metodo === "contraentrega" ? "pagas al recibir" : "verificando el pago…"}</span></p>
         </div>
         <ol class="steps">
           <li class="is-done"><span>${icon("check")}</span><div><strong>Pedido recibido</strong><p>Te escribimos por WhatsApp al ${esc(o.customer.celular)}.</p></div></li>
@@ -654,14 +664,26 @@
             <h2 id="c-ship">Entrega</h2>
             <p>${esc(o.customer.nombre)}<br>${esc(o.customer.direccion)}${o.customer.barrio ? ", " + esc(o.customer.barrio) : ""}<br>${esc(o.customer.ciudad)}, ${esc(o.customer.departamento)}</p>
             <h2>Pago</h2>
-            <p>${METHOD[o.metodo]}</p>
+            <p>${METHOD[o.metodo] || esc(o.metodo)}</p>
           </section>
         </div>
         <div class="confirm__actions">
           <a class="btn btn--blue btn--lg" href="${waLink(msg)}" target="_blank" rel="noopener">${icon("whatsapp")} Enviar pedido por WhatsApp</a>
           <a class="btn btn--ghost btn--lg" href="tienda.html">Seguir comprando</a>
         </div>
-        <p class="demo-note">Esto es una demostración: no se cobró dinero ni se envió ningún dato. El pedido solo existe en tu navegador.</p>`;
+        <p class="demo-note">${o.tx ? "Esto es una demostración: el pago fue en modo prueba de Wompi y no se cobró dinero." : "Esto es una demostración: no se cobró dinero ni se envió ningún dato. El pedido solo existe en tu navegador."}</p>`;
+
+      // El estado lo da Wompi (vía el Worker), no el navegador.
+      if (!o.tx) return;
+      const ESTADO = { APPROVED: "pago aprobado", PENDING: "pago pendiente", DECLINED: "pago rechazado", VOIDED: "pago anulado", ERROR: "error en el pago" };
+      fetch(`${S.pagos}/estado?id=${encodeURIComponent(o.tx)}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject()))
+        .then((p) => {
+          const valido = p.referencia === o.id;
+          $("#pago-estado").textContent = valido ? ESTADO[p.estado] || p.estado : "no pudimos verificar el pago";
+          if (!valido || !["APPROVED", "PENDING"].includes(p.estado)) $("#confirm-title").textContent = "Tu pago no se completó";
+        })
+        .catch(() => ($("#pago-estado").textContent = "no pudimos verificar el pago"));
     },
   };
 

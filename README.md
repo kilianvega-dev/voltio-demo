@@ -4,7 +4,7 @@
 
 A landing page plus a complete online store for a fictional Colombian tech-accessories shop. It is built mobile-first, because most customers arrive from WhatsApp or Instagram on their phones. The site is in Spanish and prices are in COP.
 
-The store, its products, prices and reviews are fictional, and the checkout is a simulation: no payment is processed and no data leaves the browser.
+The store, its products, prices and reviews are fictional. Online payments go through Wompi in sandbox mode (no real money): a small Cloudflare Worker in `pagos/` computes the total from `data.js`, signs the payment and checks its status with Wompi.
 
 <p align="center">
   <img src="screenshots/desktop.jpg" width="68%" alt="Desktop home page">
